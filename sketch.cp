@@ -40,6 +40,7 @@ void setup()
 
   // 서보 모터
   servo.attach(MOTOR);
+  servo.write(CLOSE_ANGLE); // 초기 상태는 닫힌 상태
 }
 
 void loop()
@@ -52,47 +53,70 @@ void loop()
 
   // 손 위치가 가까워지면 서보 모터를 움직임
   if (to_cm_hand < detection_duration_hand) {
-    /*
-      서보 모터를 움직임 controlLid()
-    */
+    controlLid();
   }
 
   // 쓰레기 용량 측정
   long to_cm_trash = measureTrashDistance();
 
   // 쓰레기가 일정 용량 이상 차면 LED 불빛이 변함
-  if (to_cm_trash < detection_duration_trash) {
-    /*
-      LED 색깔 변환 changeLEDColor()
-    */
-  }
+  changeLEDColor(to_cm_trash);
+  
+  delay(100); // 센서 안정화를 위한 짧은 딜레이
 }
 
 // 손 거리 측정 함수
 long measureHandDistance() {
   long duration, to_cm;
-  
+
   digitalWrite(TRIG_HAND, HIGH);
   delay(10);
   digitalWrite(TRIG_HAND, LOW);
-  
+
   duration = pulseIn(ECHO_HAND, HIGH);
   to_cm = duration * 17 / 1000;
-  
+
   return to_cm;
 }
 
 // 쓰레기 용량 측정 함수
 long measureTrashDistance() {
   long duration, to_cm;
-  
+
   digitalWrite(TRIG_TRASH, HIGH);
   delay(10);
   digitalWrite(TRIG_TRASH, LOW);
-  
+
   duration = pulseIn(ECHO_TRASH, HIGH);
   to_cm = duration * 17 / 1000;
-  
+
   return to_cm;
 }
 
+// 서보 모터 제어 함수 (뚜껑 열고 닫기)
+void controlLid() {
+  servo.write(OPEN_ANGLE);  // 뚜껑 열기
+  delay(3000);               // 3초 대기 (쓰레기 버릴 시간)
+  servo.write(CLOSE_ANGLE);  // 뚜껑 닫기
+  delay(1000);               // 1초 대기 (완전히 닫힐 때까지)
+}
+
+// LED 색깔 변경 함수 (거리에 따라)
+void changeLEDColor(long distance) {
+  // 모든 LED 끄기
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_YELLOW, LOW);
+  digitalWrite(LED_RED, LOW);
+  
+  // 거리에 따라 LED 켜기
+  // 거리가 가까울수록 (쓰레기가 많을수록) 빨간색
+  if (distance < 5) {
+    // 쓰레기가 거의 가득 참 (5cm 미만)
+    digitalWrite(LED_RED, HIGH);
+  } else if (distance < 15) {
+    // 쓰레기가 반 정도 참 (5~15cm)
+    digitalWrite(LED_YELLOW, HIGH);
+  } else {
+    // 쓰레기가 별로 안 참 (15cm 이상)
+    digitalWrite(LED_GREEN, HIGH);
+  }
